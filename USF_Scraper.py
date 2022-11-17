@@ -1,7 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
 import unicodedata
+import pymysql.cursors
+import sys
 
+# Connect to the database
+connection = pymysql.connect(host='localhost',
+                             user='admin',
+                             password='admin',
+                             database='usf_courses',
+                             cursorclass=pymysql.cursors.DictCursor, port=8889)
 
 cookies = {
     'UqFBpCf3nDqWUw__': 'v1AuwFgw__IYG',
@@ -65,12 +73,50 @@ courseInfoArray = []
 for row in coursesRows:
     courseFields = row.find_all('td')
     try:
-        courseCRN = unicodedata.normalize("NFKD",courseFields[3].text)
-        courseCRS = unicodedata.normalize("NFKD",courseFields[4].text)
-        courseDict = {'courseCRN': courseCRN, 'courseCRS': courseCRS}
+        courseCRN = unicodedata.normalize("NFKD", courseFields[3].text)
+        courseCRS = unicodedata.normalize("NFKD", courseFields[4].text)
+        courseSection = unicodedata.normalize("NFKD", courseFields[5].text)
+        courseSeats = unicodedata.normalize("NFKD", courseFields[12].text)
+        courseSeatCap = unicodedata.normalize("NFKD", courseFields[14].text)
+        courseDays = unicodedata.normalize("NFKD", courseFields[16].text)
+        courseTime = unicodedata.normalize("NFKD", courseFields[17].text)
+        courseBuilding = unicodedata.normalize("NFKD", courseFields[18].text)
+        courseRoom = unicodedata.normalize("NFKD", courseFields[19].text)
+        courseInstructor = unicodedata.normalize("NFKD", courseFields[20].text)
+        courseCampus = unicodedata.normalize("NFKD", courseFields[21].text)
+
+        courseDict = {
+            'courseCRN': courseCRN,
+            'courseCRS': courseCRS,
+            'courseSection': courseSection,
+            'courseSeats': courseSeats,
+            'courseSeatCap': courseSeatCap,
+            'courseTime': courseTime,
+            'courseBuilding': courseBuilding,
+            'courseRoom': courseRoom,
+            'courseInstructor': courseInstructor,
+            'courseCampus': courseCampus,
+        }
         courseInfoArray.append(courseDict)
     except:
         pass
 
-print(courseInfoArray)
-    
+
+with connection:
+    for course in courseInfoArray:
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `courses` VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            cursor.execute(sql, (
+                course['courseCRN'], 
+                course['courseCRS'],
+                course['courseSection'], 
+                course['courseSeats'],
+                course['courseSeatCap'], 
+                course['courseTime'],
+                course['courseBuilding'], 
+                course['courseRoom'],
+                course['courseInstructor'],
+                course['courseCampus'],
+            ))     
+    connection.commit()
+            
